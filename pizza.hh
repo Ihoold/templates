@@ -38,7 +38,7 @@ struct IsInjective;
 
 template <typename Head, typename... Tail>
 struct IsInjective<Head, Tail...> {
-  enum { value = ((NumberOfType<Head, Tail...>(0) !=-1) && IsInjective<Tail...>::value) };
+  enum { value = ((NumberOfType<Head, Tail...>(0) ==-1) && IsInjective<Tail...>::value) };
 	};
 
 template <typename T>
@@ -49,8 +49,6 @@ struct IsInjective <T> {
 //\HELPERS
 
 template<typename... Kinds> struct Pizzeria {
-  //static_assert(IsInjective<Kinds...>::value,
-  //		"No need to mention two pizza types twice!");
   template<size_t... slices> struct Pizza {
   public:
     static constexpr std::array<size_t, sizeof... (Kinds)> as_array() {
@@ -67,10 +65,15 @@ template<typename... Kinds> struct Pizzeria {
   };
 
   template<typename Kind> struct make_pizza {
+  static_assert(IsInjective<Kinds...>::value,
+  		"No need to mention two pizza types twice!");
     static_assert(NumberOfType<Kind, Kinds...>(0) != -1);
   public:
-    //  typedef Pizza<(transform<std::is_same<Kind,Kinds>::value,8,0>)...> type;
-    typedef Pizza<8,0> type;
+    typedef Pizza<(std::conditional<
+		   std::is_same<Kinds,Kind>::value,
+		   std::integral_constant<size_t,8>,
+		   std::integral_constant<size_t,0> 
+		   >::type::value) ...> type;
   };
 };
 
