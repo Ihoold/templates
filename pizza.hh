@@ -9,7 +9,7 @@
 
 // Returns -1 if LookingFor is not found
 template <typename LookingFor>
-constexpr int NumberOfType(int pos)
+constexpr int NumberOfType(int)
 {
   return -1;
 }
@@ -42,7 +42,7 @@ constexpr size_t most_yummy (size_t max, int max_yum,
 			     size_t curr, size_t amount)
 {
   return (curr == amount+1) ? max :
-    ((Kind::yumminess(curr) >= max_yum) ? 
+    ((static_cast<long long int>(Kind::yumminess(curr)) >= max_yum) ? 
      most_yummy<Kind>(curr, Kind::yumminess(curr), curr+1, amount) :
      most_yummy<Kind>(max, max_yum, curr+1, amount));
 }
