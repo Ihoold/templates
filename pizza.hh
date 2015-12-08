@@ -35,31 +35,44 @@ struct IsInjective <T> {
 };
 
 // Returns number of pieces to take
-// takes: max and curr are part of recursive call
+// takes: max, maxyum(yumminess(max)) and curr are part of recursive call
 // amount is maximum of pieces we can take of given type
 template <typename Kind>
-constexpr int most_yummy (int max, size_t curr, size_t amount)
+constexpr size_t most_yummy (size_t max, int max_yum, 
+			     size_t curr, size_t amount)
 {
   return (curr == amount+1) ? max :
-    ((Kind::yumminess(curr) >= max) ? 
-     most_yummy<Kind>(Kind::yumminess(curr), curr+1,amount):
-     most_yummy<Kind>(max, curr+1, amount));
+    ((Kind::yumminess(curr) >= max_yum) ? 
+     most_yummy<Kind>(curr, Kind::yumminess(curr), curr+1, amount) :
+     most_yummy<Kind>(max, max_yum, curr+1, amount));
 }
 
+template <typename Kind>
+constexpr bool is_yum()
+{
+  return Kind::yumminess(0) == 0;
+}
+
+template <bool... K>
+constexpr bool bool_and()
+{
+  return (K && ...); 
+}
 
 //\HELPERS
 template<typename Pizza1, typename Pizza2> 
 struct best_mix
 {
-  static_assert(std::is_same<typename Pizza1::type, typename Pizza2::type>::value,
+  static_assert(std::is_same<typename Pizza1::pizzeria, typename Pizza2::pizzeria>::value,
 		"We can't mix pizzas from diffrent pizzerias!");
-  //  typedef Pizza<Pizza1::type,> type;
+  typedef typename Pizza1::pizzeria::template pizza_mix<Pizza1, Pizza2>::type type;
 };
 
 template<typename... Kinds> struct Pizzeria {
   static_assert(IsInjective<Kinds...>::value,
   		"No need to mention one pizza type twice!");
-  template<typename Pizza_type, size_t... slices> 
+  static_assert(bool_and<is_yum<Kinds>()...>(), "that pizza looks weird!");
+  template<size_t... slices> 
   struct Pizza {
   public:
     static constexpr std::array<size_t, sizeof... (Kinds)> as_array() {
@@ -71,18 +84,24 @@ template<typename... Kinds> struct Pizzeria {
       constexpr std::array<size_t, sizeof... (slices)> arr_of_types = {{slices...}};
       return arr_of_types[NumberOfType<PKind,Kinds...>(0)];
     }
-  private:
-    typedef Pizzeria<Kinds...> type;
+    typedef Pizzeria<Kinds...> pizzeria;
   public:
-    typedef Pizza<type,(2*slices)...> sliced_type;
+    typedef Pizza<(2*slices)...> sliced_type;
 
+  };
+
+  template<typename Pizza1, typename Pizza2>
+  struct pizza_mix
+  {
+    typedef Pizza<(most_yummy<Kinds>
+		   (0,0,0,Pizza1::template count<Kinds>()+Pizza2::template count<Kinds>()))
+		  ...> type;
   };
 
   template<typename Kind> struct make_pizza {
     static_assert(NumberOfType<Kind, Kinds...>(0) != -1,
 		  "We don't have this one in menu!");
-  public:
-    typedef Pizza<Pizzeria, (std::conditional<
+    typedef Pizza< (std::conditional<
 		   std::is_same<Kinds,Kind>::value,
 		   std::integral_constant<size_t,8>,
 		   std::integral_constant<size_t,0> 
