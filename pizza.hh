@@ -38,12 +38,13 @@ struct IsInjective <T> {
 // takes: max, maxyum(yumminess(max)) and curr are part of recursive call
 // amount is maximum of pieces we can take of given type
 template <typename Kind>
-constexpr size_t most_yummy (size_t max, int max_yum, 
+constexpr size_t most_yummy (size_t max, unsigned long long int max_yum, 
 			     size_t curr, size_t amount)
 {
   return (curr == amount+1) ? max :
-    ((static_cast<long long int>(Kind::yumminess(curr)) >= max_yum) ? 
-     most_yummy<Kind>(curr, Kind::yumminess(curr), curr+1, amount) :
+    (Kind::yumminess(curr) < 0) ? most_yummy<Kind>(max, max_yum, curr+1, amount) :
+    ((static_cast<unsigned long long int>(Kind::yumminess(curr)) >= max_yum) ? 
+     most_yummy<Kind>(curr, static_cast<unsigned long long int>(Kind::yumminess(curr)), curr+1, amount) :
      most_yummy<Kind>(max, max_yum, curr+1, amount));
 }
 
@@ -71,7 +72,6 @@ struct best_mix
 template<typename... Kinds> struct Pizzeria {
   static_assert(IsInjective<Kinds...>::value,
   		"No need to mention one pizza type twice!");
-  static_assert(bool_and<is_yum<Kinds>()...>(), "that pizza looks weird!");
   template<size_t... slices> 
   struct Pizza {
   public:
@@ -93,6 +93,7 @@ template<typename... Kinds> struct Pizzeria {
   template<typename Pizza1, typename Pizza2>
   struct pizza_mix
   {
+    static_assert(bool_and<is_yum<Kinds>()...>(), "that pizza looks weird!");
     typedef Pizza<(most_yummy<Kinds>
 		   (0,0,0,Pizza1::template count<Kinds>()+Pizza2::template count<Kinds>()))
 		  ...> type;
